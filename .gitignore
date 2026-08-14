@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local overrides — keep your real Firebase URL out of a fork's history
+# (delete this line if you WANT config.js committed, which is the normal
+#  case: the URL is safe to publish under the documented rules)
+assets/js/config.local.js
+
+# Logs
+*.log

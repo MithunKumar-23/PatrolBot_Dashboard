@@ -1,0 +1,133 @@
+/* ==================================================================
+   PatrolBot Global Console — stylesheet
+   Dark security-console theme. All colours live in the :root block,
+   so retheming is a one-place edit.
+   ================================================================== */
+
+:root{
+  --bg:#0b1020;
+  --panel:#141b31;
+  --panel2:#1b2440;
+  --line:#2a3558;
+  --txt:#e8ecf8;
+  --dim:#8b96b8;
+  --ok:#2ecc71;
+  --warn:#f1c40f;
+  --bad:#e74c3c;
+  --acc:#4da3ff;
+  --r:14px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+body{background:var(--bg);color:var(--txt);min-height:100vh;padding:16px}
+
+/* ── top bar ─────────────────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.logo{width:38px;height:38px;border-radius:10px;
+      background:linear-gradient(135deg,#4da3ff,#7b5cff);
+      display:grid;place-items:center;font-size:20px}
+h1{font-size:1.15rem;letter-spacing:.5px}
+.sub{color:var(--dim);font-size:.75rem;font-weight:400}
+.spacer{flex:1}
+
+.chip{padding:6px 12px;border-radius:999px;font-size:.72rem;font-weight:600;
+      border:1px solid var(--line);background:var(--panel);white-space:nowrap}
+.chip.on{color:var(--ok);border-color:var(--ok)}
+.chip.off{color:var(--dim)}
+.chip.bad{color:var(--bad);border-color:var(--bad)}
+
+/* ── banners ─────────────────────────────────────────────────────── */
+.banner{display:none;align-items:center;gap:10px;padding:12px 16px;
+        border-radius:var(--r);font-weight:700;margin-bottom:12px;
+        animation:flash 1s steps(2) infinite}
+.banner.show{display:flex}
+.banner.fire{background:#3a1010;border:1px solid var(--bad);color:#ff8a80}
+.banner.motion{background:#3a2f0b;border:1px solid var(--warn);color:#ffe082}
+.banner.stale{background:#1b2440;border:1px solid var(--line);color:var(--dim);animation:none}
+.banner button{margin-left:auto;background:transparent;border:1px solid currentColor;
+               color:inherit;border-radius:8px;padding:5px 12px;cursor:pointer;font-weight:600}
+@keyframes flash{50%{filter:brightness(1.7)}}
+
+/* Respect users who get motion sick or have vestibular disorders —
+   the alert still shows, it just stops pulsing. */
+@media (prefers-reduced-motion: reduce){
+  .banner,.live{animation:none !important}
+}
+
+/* ── layout ──────────────────────────────────────────────────────── */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);
+      border-radius:var(--r);padding:14px;overflow:hidden}
+.card h2{font-size:.8rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;
+         margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.live{color:var(--bad);font-size:.65rem;animation:flash 1.4s infinite}
+
+.stream{grid-column:span 7}
+.events{grid-column:span 5}
+.telemetry{grid-column:span 12}
+@media(max-width:900px){
+  .stream,.events{grid-column:span 12}
+}
+
+/* ── camera panel ────────────────────────────────────────────────── */
+.frame{width:100%;aspect-ratio:4/3;background:#000;border-radius:10px;border:0;display:block}
+.placeholder{display:grid;place-items:center;text-align:center;color:var(--dim);
+             font-size:.8rem;width:100%;aspect-ratio:4/3;background:#000;
+             border-radius:10px;padding:20px;line-height:1.6}
+.placeholder b{color:var(--txt)}
+
+.iprow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.iprow input{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+             border-radius:8px;color:var(--txt);padding:8px 10px;font-size:.8rem}
+.iprow input:focus{outline:none;border-color:var(--acc)}
+.iprow small{color:var(--dim);font-size:.68rem;flex-basis:100%;line-height:1.5}
+
+/* ── telemetry tiles ─────────────────────────────────────────────── */
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+.tile{background:var(--panel2);border:1px solid var(--line);
+      border-radius:12px;padding:12px;text-align:center}
+.tile .v{font-size:1.45rem;font-weight:700;margin:4px 0}
+.tile .l{color:var(--dim);font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+.v.ok{color:var(--ok)}
+.v.warn{color:var(--warn)}
+.v.bad{color:var(--bad)}
+.v.acc{color:var(--acc)}
+
+/* ── event log ───────────────────────────────────────────────────── */
+.log{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.ev{background:var(--panel2);border-left:3px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-size:.78rem}
+.ev .t{color:var(--dim);font-size:.66rem;display:block;margin-top:3px}
+.ev.fire,.ev.error,.ev.security{border-left-color:var(--bad)}
+.ev.motion{border-left-color:var(--warn)}
+.ev.photo,.ev.remote{border-left-color:var(--acc)}
+.ev.boot{border-left-color:var(--ok)}
+
+/* ── controls ────────────────────────────────────────────────────── */
+.controls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.btn{flex:1;min-width:120px;padding:11px;border-radius:10px;border:1px solid var(--line);
+     background:var(--panel2);color:var(--txt);font-weight:700;cursor:pointer;
+     font-size:.85rem;transition:transform .08s,border-color .15s}
+.btn:hover{border-color:var(--acc)}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.go{background:#0f2b1c;border-color:var(--ok);color:var(--ok)}
+.btn.halt{background:#2b1414;border-color:var(--bad);color:var(--bad)}
+.btn-compact{flex:0 0 auto;min-width:90px}
+
+.speedbox{flex:2;min-width:220px;background:var(--panel2);border:1px solid var(--line);
+          border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:10px}
+.speedbox label{font-size:.72rem;color:var(--dim);text-transform:uppercase;
+                letter-spacing:1px;white-space:nowrap}
+.speedbox input{flex:1;accent-color:var(--acc)}
+.speedbox b{min-width:34px;text-align:right;color:var(--acc)}
+
+/* ── toast ───────────────────────────────────────────────────────── */
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);
+       background:var(--panel2);border:1px solid var(--acc);color:var(--txt);
+       padding:10px 18px;border-radius:10px;font-weight:600;font-size:.85rem;
+       opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:99;
+       max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{margin-top:14px;color:var(--dim);font-size:.7rem;text-align:center;line-height:1.7}
