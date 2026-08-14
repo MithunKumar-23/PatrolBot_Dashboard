@@ -17,7 +17,7 @@
 window.PB_CONFIG = {
 
   /* ---- required ------------------------------------------------- */
-  databaseUrl: "https://patrolbot-xxxxx-default-rtdb.firebaseio.com",
+  databaseUrl: "https://patrolbot-eb5a6-default-rtdb.asia-southeast1.firebasedatabase.app",
 
   /* ---- paths (match firebase.h — change both or neither) -------- */
   basePath: "/patrolbot",
