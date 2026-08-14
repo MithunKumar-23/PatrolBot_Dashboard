@@ -48,9 +48,13 @@
       UI.setText("tLR", d.distL + " / " + d.distR);
 
       /* ---- alerts ---- */
+      /* [FIX-12] Three states, not two. A flame sensor that never
+         releases is a wiring/threshold fault, and the firmware now
+         says so — showing it as red FIRE forever just teaches you to
+         ignore the panel. */
       const fire = UI.$("tFire");
-      fire.textContent = d.fire ? "🔥 FIRE" : "SAFE";
-      UI.setClass(fire, "v", d.fire ? "bad" : "ok");
+      fire.textContent = d.fault ? "⚠ FAULT" : (d.fire ? "🔥 FIRE" : "SAFE");
+      UI.setClass(fire, "v", d.fault ? "warn" : (d.fire ? "bad" : "ok"));
 
       const motion = UI.$("tMotion");
       motion.textContent = d.motion ? "⚠ ALERT" : "CLEAR";
@@ -70,7 +74,7 @@
 
       /* ---- banners: suppressed when stale, so a dead robot's last
               alarm doesn't flash on screen forever ---- */
-      UI.$("bFire").className   = "banner fire"   + ((d.fire   && !stale) ? " show" : "");
+      UI.$("bFire").className   = "banner fire"   + ((d.fire && !d.fault && !stale) ? " show" : "");
       UI.$("bMotion").className = "banner motion" + ((d.motion && !stale) ? " show" : "");
 
       const key = (d.fire ? "F" : "") + (d.motion ? "M" : "");
@@ -102,6 +106,73 @@
     }
   }
 
+  /* ================= captured photos [NEW v4.6] =================== *
+   * The camera can only serve photos on a private LAN address, so the
+   * cloud dashboard reads them from Drive instead: Apps Script
+   * publishes each file's ID to Firebase right after saving it, and
+   * Drive's thumbnail endpoint renders straight into an <img>.       */
+  let lastPhotoId = null;
+
+  async function pollPhotos(){
+    try{
+      const p = await API.getLastPhoto();
+      const img  = UI.$("capImg");
+      const msg  = UI.$("capMsg");
+      const link = UI.$("capLink");
+
+      if (!p || !p.thumb){
+        msg.style.display = "grid";
+        msg.textContent = "No captures yet. Press CAPTURE NOW, or wait for a motion alert.";
+        img.hidden = true;
+        return;
+      }
+
+      UI.setText("capAge", p.ts ? UI.ago(Date.now() - p.ts) : "");
+
+      /* Only touch img.src when the photo actually changed — otherwise
+         every poll would restart the download and make the panel
+         flicker once a second. */
+      if (p.id !== lastPhotoId){
+        lastPhotoId = p.id;
+        link.href = p.view || "#";
+        img.onload  = function(){ img.hidden = false; msg.style.display = "none"; };
+        img.onerror = function(){
+          img.hidden = true;
+          msg.style.display = "grid";
+          msg.innerHTML =
+            "📸 A capture exists but Drive would not serve the thumbnail.<br><br>" +
+            "In Apps Script, confirm the file sharing line runs " +
+            "(<span class='mono'>ANYONE_WITH_LINK</span>), then redeploy as a " +
+            "<b>new version</b>.";
+        };
+        img.src = p.thumb;
+      }
+    }catch(e){
+      /* /lastphoto simply does not exist until the first upload —
+         that is not an error worth showing. */
+    }
+
+    try{
+      const list = await API.getPhotos();
+      const strip = UI.$("capStrip");
+      strip.innerHTML = "";
+      for (const ph of list.slice(0, 12)){
+        if (!ph.thumb) continue;
+        const a = document.createElement("a");
+        a.href = ph.view || "#";
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.title = ph.ts ? new Date(ph.ts).toLocaleString() : (ph.name || "");
+        const im = document.createElement("img");
+        im.src = ph.thumb;
+        im.alt = ph.name || "capture";
+        im.loading = "lazy";
+        a.appendChild(im);
+        strip.appendChild(a);
+      }
+    }catch(e){ /* keep the previous strip */ }
+  }
+
   /* ================= remote control =============================== */
   async function send(act, val){
     if (!cfg.enableControls){
@@ -115,6 +186,13 @@
       await API.sendCommand(act, val, pin);
       UI.toast("📡 Sent: " + act + " — the robot applies it within ~2 s");
       if (act === "speed") sliderTouched = true;
+      /* A capture takes ~2 s on the robot plus a Drive upload, so look
+         again a few seconds later instead of making the user wait for
+         the next scheduled poll. */
+      if (act === "snap"){
+        setTimeout(pollPhotos,  6000);
+        setTimeout(pollPhotos, 14000);
+      }
     }catch(e){
       UI.toast("❌ Could not reach Firebase (" + e.message + ")");
     }
@@ -137,6 +215,7 @@
     UI.$("btnConnect").addEventListener("click", function(){
       CAM.setIpManual(UI.$("camInput").value);
     });
+    UI.$("btnRetry").addEventListener("click", function(){ CAM.retry(); });
     UI.$("camInput").addEventListener("keydown", function(e){
       if (e.key === "Enter") CAM.setIpManual(this.value);
     });
@@ -163,13 +242,15 @@
 
     pollLive();
     pollEvents();
+    pollPhotos();
     setInterval(pollLive,   cfg.pollMs);
     setInterval(pollEvents, cfg.eventPollMs);
+    setInterval(pollPhotos, cfg.photoPollMs || 8000);
 
     /* Coming back to a backgrounded tab should feel instant rather
        than showing up-to-1.5-s-old data. */
     document.addEventListener("visibilitychange", function(){
-      if (!document.hidden){ pollLive(); pollEvents(); }
+      if (!document.hidden){ pollLive(); pollEvents(); pollPhotos(); }
     });
   }
 

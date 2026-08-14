@@ -43,6 +43,27 @@ window.PB_API = (function(){
   }
 
   /**
+   * [NEW v4.6] The most recent capture, as published by Apps Script
+   * after it saves the file to Drive. Returns null before the first
+   * photo exists — the dashboard treats that as "no captures yet"
+   * rather than an error.
+   */
+  async function getLastPhoto(){
+    const r = await fetch(root + "/lastphoto.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+
+  /** Recent captures for the thumbnail strip, newest first. */
+  async function getPhotos(){
+    const r = await fetch(root + "/photos.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    if (!data) return [];
+    return Object.values(data).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  }
+
+  /**
    * Queue one command for the robot.
    * PUT (not POST) so /cmd always holds exactly one command. The robot
    * compares `id` against the last one it executed, so re-sending the
@@ -67,5 +88,5 @@ window.PB_API = (function(){
     return true;
   }
 
-  return { isConfigured, getLive, getEvents, sendCommand };
+  return { isConfigured, getLive, getEvents, getLastPhoto, getPhotos, sendCommand };
 })();

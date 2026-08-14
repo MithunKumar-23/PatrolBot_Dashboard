@@ -64,9 +64,10 @@ h1{font-size:1.15rem;letter-spacing:.5px}
 
 .stream{grid-column:span 7}
 .events{grid-column:span 5}
+.capture{grid-column:span 7}
 .telemetry{grid-column:span 12}
 @media(max-width:900px){
-  .stream,.events{grid-column:span 12}
+  .stream,.events,.capture{grid-column:span 12}
 }
 
 /* ── camera panel ────────────────────────────────────────────────── */
@@ -75,12 +76,25 @@ h1{font-size:1.15rem;letter-spacing:.5px}
              font-size:.8rem;width:100%;aspect-ratio:4/3;background:#000;
              border-radius:10px;padding:20px;line-height:1.6}
 .placeholder b{color:var(--txt)}
+.placeholder .mono, .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+                          font-size:.92em;color:var(--acc);word-break:break-all}
 
 .iprow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
 .iprow input{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
              border-radius:8px;color:var(--txt);padding:8px 10px;font-size:.8rem}
 .iprow input:focus{outline:none;border-color:var(--acc)}
 .iprow small{color:var(--dim);font-size:.68rem;flex-basis:100%;line-height:1.5}
+.btn-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+
+/* ── latest capture panel ────────────────────────────────────────── */
+.capwrap{display:block;text-decoration:none}
+.capwrap .frame{cursor:zoom-in}
+.strip{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:4px}
+.strip a{flex:0 0 auto;display:block;border:1px solid var(--line);border-radius:8px;
+         overflow:hidden;line-height:0;transition:border-color .15s}
+.strip a:hover{border-color:var(--acc)}
+.strip img{width:78px;height:58px;object-fit:cover;background:#000;display:block}
+.strip:empty{display:none}
 
 /* ── telemetry tiles ─────────────────────────────────────────────── */
 .tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}

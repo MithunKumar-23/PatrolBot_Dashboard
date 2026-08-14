@@ -26,7 +26,12 @@ window.PB_CONFIG = {
   pollMs:        1500,   // telemetry refresh
   eventPollMs:   6000,   // alert-history refresh
   staleAfterMs: 15000,   // no update for this long → "robot offline"
-  streamRetryMs: 8000,   // camera reconnect attempt interval
+  photoPollMs:   8000,   // how often to check for a new capture
+  streamRetryMs: 8000,   // camera reconnect base interval (backs off)
+  /* [FIX-13] Give up waiting for the first video frame after this
+     long. A mixed-content block fires no error event at all, so
+     without a timeout the panel would say "connecting…" forever. */
+  streamTimeoutMs: 9000,
 
   /* ---- features ------------------------------------------------- */
   enableControls: true,  // false = view-only dashboard, no /cmd writes

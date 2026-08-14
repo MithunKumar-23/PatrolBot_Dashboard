@@ -51,12 +51,28 @@
              placeholder="camera IP, e.g. 192.168.0.185"
              aria-label="Camera IP address">
       <button type="button" class="btn btn-compact" id="btnConnect">CONNECT</button>
+      <button type="button" class="btn btn-compact" id="btnRetry">RETRY</button>
+      <a class="btn btn-compact btn-link" id="btnOpenStream" href="#" target="_blank"
+         rel="noopener">OPEN ↗</a>
       <small>
         Auto-filled from Firebase. Video only works while you are on the same Wi-Fi as
-        the robot — and Chrome must allow <b>Insecure content</b> for this site
-        (padlock icon → Site settings). See the README for the exact steps.
+        the robot — and the browser must allow <b>Insecure content</b> for this site
+        (padlock / ⓘ icon → Site settings). <b>OPEN ↗</b> loads the raw stream in a new
+        tab, which is the quickest way to tell a camera problem from a browser one.
       </small>
     </div>
+  </section>
+
+  <!-- ── latest capture (from Google Drive, works worldwide) ─────── -->
+  <section class="card capture">
+    <h2>📸 Latest Capture <span class="sub" id="capAge"></span></h2>
+
+    <a id="capLink" href="#" target="_blank" rel="noopener" class="capwrap">
+      <img class="frame" id="capImg" alt="Most recent captured photo" hidden>
+    </a>
+    <div class="placeholder" id="capMsg">no captures yet — trigger one below</div>
+
+    <div class="strip" id="capStrip"></div>
   </section>
 
   <!-- ── alert history ───────────────────────────────────────────── -->
