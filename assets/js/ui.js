@@ -86,10 +86,10 @@ window.PB_UI = (function(){
     const log = $("log");
     if (!log) return;
     log.innerHTML = "";
-    setText("evCount", list.length ? "(" + list.length + ")" : "");
+    setText("evCount", list.length ? list.length + " entries" : "");
 
     if (!list.length){
-      log.innerHTML = '<div class="ev">No events yet — the robot logs one on every boot.</div>';
+      log.innerHTML = '<div class="ev"><span>Nothing logged yet. The robot writes an entry every time it boots.</span></div>';
       return;
     }
     for (const e of list){
@@ -97,7 +97,9 @@ window.PB_UI = (function(){
       div.className = "ev " + (e.type || "");
       /* textContent, not innerHTML: event text originates from the
          robot, and /cmd is world-writable, so treat it as untrusted. */
-      div.textContent = e.msg || "(no message)";
+      const msg = document.createElement("span");
+      msg.textContent = e.msg || "(no message)";
+      div.appendChild(msg);
       const time = document.createElement("span");
       time.className = "t";
       time.textContent = e.ts ? new Date(e.ts).toLocaleString() : "";

@@ -71,8 +71,10 @@ window.PB_CAMERA = (function(){
     const msg = UI.$("streamMsg");
     live = false;
     img.hidden = true;
-    msg.style.display = "grid";
-    UI.setText("liveDot", "● NO SIGNAL");
+    msg.style.display = "block";
+    UI.setText("liveDot", "no signal");
+    UI.setClass(UI.$("liveDot"), "tag", "ghost");
+    UI.setText("fpsTag", "");
 
     const httpsPage = location.protocol === "https:";
     const reachable = await probe();
@@ -137,7 +139,9 @@ window.PB_CAMERA = (function(){
       clearTimeout(watchdog);
       img.hidden = false;
       msg.style.display = "none";
-      UI.setText("liveDot", "● LIVE");
+      UI.setText("liveDot", "live");
+      UI.setClass(UI.$("liveDot"), "tag", "live");
+      UI.setText("fpsTag", camIp);
     };
     img.onerror = function(){
       showOffline();
@@ -146,8 +150,10 @@ window.PB_CAMERA = (function(){
 
     live = false;
     img.hidden = true;
-    msg.style.display = "grid";
-    msg.textContent = "connecting to " + camIp + " …";
+    msg.style.display = "block";
+    msg.textContent = "Connecting to " + camIp + " …";
+    UI.setText("liveDot", "connecting");
+    UI.setClass(UI.$("liveDot"), "tag", "ghost");
 
     /* Cache-bust every attempt. Without this, a browser that already
        failed on this exact URL serves the failure from cache and never

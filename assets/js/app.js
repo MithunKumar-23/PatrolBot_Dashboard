@@ -16,13 +16,23 @@
   let lastAlertKey  = "";
 
   /* ================= telemetry ==================================== */
+  /* Set one annunciator lamp: state class + the word inside it.
+     Lamps latch as a unit (colour + bulb + label) so the operator
+     reads position, not text. */
+  function lamp(id, state, label){
+    const el = UI.$(id);
+    if (!el) return;
+    el.className = "lamp" + (state ? " " + state : "");
+    const span = el.querySelector("span");
+    if (span) span.textContent = label;
+  }
+
   async function pollLive(){
     try{
       const d = await API.getLive();
       if (!d) throw new Error("empty");
 
-      UI.setClass(UI.$("chipCloud"), "chip", "on");
-      UI.setText("chipCloud", "☁ CLOUD OK");
+      lamp("chipCloud", "on", "Linked");
 
       /* Staleness: a frozen dashboard looks exactly like a calm one,
          which is the worst failure mode a security display can have.
@@ -32,39 +42,43 @@
       const stale = age > cfg.staleAfterMs;
 
       UI.$("bStale").className = "banner stale" + (stale ? " show" : "");
-      UI.setClass(UI.$("chipBot"), "chip", stale ? "bad" : "on");
-      UI.setText("chipBot", stale ? "🤖 OFFLINE" : "🤖 ONLINE");
-      UI.setText("age", "updated " + UI.ago(age));
+      lamp("chipBot", stale ? "bad" : "on", stale ? "Offline" : "On watch");
+      UI.setText("age", stale ? "last seen " + UI.ago(age) : "updated " + UI.ago(age));
 
       UI.setText("subInfo",
-        (d.botIp ? "robot " + d.botIp : "") + (d.camIp ? " · cam " + d.camIp : ""));
+        (d.botIp ? "robot " + d.botIp : "") + (d.camIp ? "  ·  cam " + d.camIp : ""));
 
       CAM.setIpFromCloud(d.camIp);
 
-      /* ---- distances ---- */
+      /* ---- clearance ---- */
       const dist = UI.$("tDist");
       dist.textContent = (d.dist != null ? d.dist : "—");
-      UI.setClass(dist, "v", d.dist < 30 ? "bad" : d.dist < 60 ? "warn" : "acc");
-      UI.setText("tLR", d.distL + " / " + d.distR);
+      UI.setClass(dist, "", d.dist < 30 ? "bad" : d.dist < 60 ? "warn" : "acc");
+      UI.setText("tLR", (d.distL != null ? d.distL : "—") + " / " +
+                        (d.distR != null ? d.distR : "—"));
 
-      /* ---- alerts ---- */
-      /* [FIX-12] Three states, not two. A flame sensor that never
-         releases is a wiring/threshold fault, and the firmware now
-         says so — showing it as red FIRE forever just teaches you to
-         ignore the panel. */
+      /* ---- flame: three states, not two [FIX-12] ----
+         A sensor that never releases is a wiring or threshold fault,
+         and the firmware now says so. Showing it as FIRE forever just
+         teaches you to ignore the panel. */
       const fire = UI.$("tFire");
-      fire.textContent = d.fault ? "⚠ FAULT" : (d.fire ? "🔥 FIRE" : "SAFE");
-      UI.setClass(fire, "v", d.fault ? "warn" : (d.fire ? "bad" : "ok"));
+      fire.textContent = d.fault ? "Fault" : (d.fire ? "Fire" : "Clear");
+      UI.setClass(fire, "", d.fault ? "warn" : (d.fire ? "bad" : "ok"));
+      lamp("lampFire", d.fault ? "warn" : (d.fire ? "bad" : "on"),
+                       d.fault ? "Fault" : (d.fire ? "Fire" : "Clear"));
 
+      /* ---- motion ---- */
       const motion = UI.$("tMotion");
-      motion.textContent = d.motion ? "⚠ ALERT" : "CLEAR";
-      UI.setClass(motion, "v", d.motion ? "bad" : "ok");
-      UI.setText("tHits", "verifying " + (d.hits || 0) + "/" + cfg.motionNeed);
+      motion.textContent = d.motion ? "Alert" : "Clear";
+      UI.setClass(motion, "", d.motion ? "bad" : "ok");
+      UI.setText("tHits", (d.hits || 0) + " of " + cfg.motionNeed + " samples");
+      lamp("lampMotion", d.motion ? "bad" : "on", d.motion ? "Intruder" : "Clear");
 
+      /* ---- radar ---- */
       const radar = UI.$("tRadar");
-      radar.textContent = d.radar ? "● ACTIVE" : "○ quiet";
-      UI.setClass(radar, "v", d.radar ? "warn" : "ok");
-      UI.setClass(UI.$("chipRadar"), "chip", d.radar ? "on" : "off");
+      radar.textContent = d.radar ? "Active" : "Quiet";
+      UI.setClass(radar, "", d.radar ? "warn" : "ok");
+      lamp("chipRadar", d.radar ? "beam" : "", d.radar ? "Returning" : "Quiet");
 
       /* ---- status ---- */
       UI.setText("tState",  d.state || "—");
@@ -73,7 +87,7 @@
       UI.setText("tUp",     "up " + Math.floor((d.up || 0) / 60) + " min");
 
       /* ---- banners: suppressed when stale, so a dead robot's last
-              alarm doesn't flash on screen forever ---- */
+              alarm doesn't sit on screen forever ---- */
       UI.$("bFire").className   = "banner fire"   + ((d.fire && !d.fault && !stale) ? " show" : "");
       UI.$("bMotion").className = "banner motion" + ((d.motion && !stale) ? " show" : "");
 
@@ -81,19 +95,20 @@
       if (key && key !== lastAlertKey && !stale) UI.beep(d.fire ? 880 : 660);
       lastAlertKey = key;
 
-      /* ---- control state mirrors the robot, not the last click ---- */
+      /* ---- controls mirror the robot, not the last click ---- */
       patrolOn = !!d.patrol;
       const pb = UI.$("btnPatrol");
-      pb.textContent = patrolOn ? "⏸ STOP PATROL" : "▶ START PATROL";
-      pb.className   = "btn " + (patrolOn ? "halt" : "go");
+      pb.textContent = patrolOn ? "Stop patrol" : "Start patrol";
+      pb.className   = "btn " + (patrolOn ? "stop" : "go");
+      lamp("lampPatrol", patrolOn ? "on" : "", patrolOn ? "Running" : "Held");
 
       if (!sliderTouched && d.speed){
         UI.$("speedSlider").value = d.speed;
         UI.setText("speedLabel", d.speed);
       }
     }catch(e){
-      UI.setClass(UI.$("chipCloud"), "chip", "bad");
-      UI.setText("chipCloud", "☁ CLOUD ERROR");
+      lamp("chipCloud", "bad", "No link");
+      UI.setText("age", "no data");
     }
   }
 
@@ -113,6 +128,28 @@
    * Drive's thumbnail endpoint renders straight into an <img>.       */
   let lastPhotoId = null;
 
+  /* [FIX-17] Google serves Drive images from several hosts, and the
+     one the old code used (drive.google.com/thumbnail) 404s until
+     Drive has generated a thumbnail — which for a photo uploaded
+     seconds ago it has not. That is why captures reached Drive but
+     never appeared here. Try each candidate in turn and keep the
+     first that actually decodes. */
+  function loadWithFallback(img, urls, onFail){
+    let i = 0;
+    function attempt(){
+      if (i >= urls.length){ onFail(); return; }
+      const url = urls[i++];
+      if (!url){ attempt(); return; }
+      img.onerror = attempt;
+      img.onload  = function(){
+        img.hidden = false;
+        if (img.id === "capImg") UI.$("capMsg").style.display = "none";
+      };
+      img.src = url;
+    }
+    attempt();
+  }
+
   async function pollPhotos(){
     try{
       const p = await API.getLastPhoto();
@@ -120,36 +157,45 @@
       const msg  = UI.$("capMsg");
       const link = UI.$("capLink");
 
-      if (!p || !p.thumb){
-        msg.style.display = "grid";
-        msg.textContent = "No captures yet. Press CAPTURE NOW, or wait for a motion alert.";
+      if (!p || !p.id){
+        msg.style.display = "block";
+        msg.textContent = "No captures yet. Press “Capture now”, or wait for a motion alert.";
         img.hidden = true;
         return;
       }
 
       UI.setText("capAge", p.ts ? UI.ago(Date.now() - p.ts) : "");
+      UI.setText("capName", p.name || "");
 
       /* Only touch img.src when the photo actually changed — otherwise
-         every poll would restart the download and make the panel
-         flicker once a second. */
+         every poll restarts the download and the panel flickers. */
       if (p.id !== lastPhotoId){
         lastPhotoId = p.id;
         link.href = p.view || "#";
-        img.onload  = function(){ img.hidden = false; msg.style.display = "none"; };
-        img.onerror = function(){
+        msg.style.display = "block";
+        msg.textContent = "loading photo…";
+        img.hidden = true;
+
+        const camIp = CAM.getIp();
+        loadWithFallback(img, [
+          p.img,                                    // lh3 direct host
+          p.alt1,                                   // drive thumbnail
+          p.alt2,                                   // legacy uc?export=view
+          p.thumb,                                  // small lh3
+          camIp ? ("http://" + camIp + "/photo?t=" + Date.now()) : null
+        ], function(){
           img.hidden = true;
-          msg.style.display = "grid";
+          msg.style.display = "block";
           msg.innerHTML =
-            "📸 A capture exists but Drive would not serve the thumbnail.<br><br>" +
-            "In Apps Script, confirm the file sharing line runs " +
+            "📸 A capture exists in Drive but no image host would serve it.<br><br>" +
+            "In Apps Script confirm the sharing line runs " +
             "(<span class='mono'>ANYONE_WITH_LINK</span>), then redeploy as a " +
-            "<b>new version</b>.";
-        };
-        img.src = p.thumb;
+            "<b>new version</b>. Meanwhile the file itself is safe — " +
+            "<a href='" + (p.view || "#") + "' target='_blank' rel='noopener'>open it in Drive</a>.";
+        });
       }
     }catch(e){
-      /* /lastphoto simply does not exist until the first upload —
-         that is not an error worth showing. */
+      /* /lastphoto simply does not exist until the first upload. */
     }
 
     try{
@@ -157,16 +203,18 @@
       const strip = UI.$("capStrip");
       strip.innerHTML = "";
       for (const ph of list.slice(0, 12)){
-        if (!ph.thumb) continue;
         const a = document.createElement("a");
         a.href = ph.view || "#";
         a.target = "_blank";
         a.rel = "noopener";
         a.title = ph.ts ? new Date(ph.ts).toLocaleString() : (ph.name || "");
         const im = document.createElement("img");
-        im.src = ph.thumb;
         im.alt = ph.name || "capture";
         im.loading = "lazy";
+        /* Same fallback chain, minus the local camera (which only ever
+           holds the single most recent shot). */
+        loadWithFallback(im, [ph.thumb, ph.alt1, ph.img, ph.alt2],
+                         function(){ a.remove(); });
         a.appendChild(im);
         strip.appendChild(a);
       }
@@ -201,7 +249,19 @@
   /* ================= wiring ======================================= */
   function bind(){
     document.querySelectorAll("[data-cmd]").forEach(function(el){
-      el.addEventListener("click", function(){ send(el.dataset.cmd, 0); });
+      el.addEventListener("click", function(){
+        send(el.dataset.cmd, 0);
+        /* Visible busy state: a capture takes a few seconds end to end,
+           and without feedback people press the button repeatedly —
+           which used to queue several captures and make the camera look
+           unreliable. */
+        if (el.dataset.cmd === "snap"){
+          const label = el.textContent;
+          el.disabled = true;
+          el.textContent = "⏳ Capturing…";
+          setTimeout(function(){ el.disabled = false; el.textContent = label; }, 12000);
+        }
+      });
     });
 
     UI.$("btnPatrol").addEventListener("click", function(){
@@ -233,9 +293,8 @@
     bind();
 
     if (!API.isConfigured()){
-      UI.setText("subInfo", "⚠ edit assets/js/config.js — databaseUrl is still a placeholder");
-      UI.setClass(UI.$("chipCloud"), "chip", "bad");
-      UI.setText("chipCloud", "☁ NOT CONFIGURED");
+      UI.setText("subInfo", "Set databaseUrl in assets/js/config.js — it is still a placeholder");
+      lamp("chipCloud", "warn", "Not set");
       UI.toast("Set your Firebase URL in assets/js/config.js");
       return;
     }

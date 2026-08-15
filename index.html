@@ -3,106 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Live security console for the PatrolBot autonomous ESP32 patrol robot — sensor telemetry via Firebase, camera stream via local network.">
-<meta name="theme-color" content="#0b1020">
-<title>PatrolBot — Global Console</title>
+<meta name="description" content="Live security console for the PatrolBot autonomous ESP32 patrol robot — sensor telemetry via Firebase, camera stream over the local network.">
+<meta name="theme-color" content="#0E1A1F">
+<title>PatrolBot — Station</title>
 
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="logo" aria-hidden="true">🛡️</div>
-  <div>
-    <h1>PATROLBOT GLOBAL CONSOLE</h1>
-    <p class="sub" id="subInfo">connecting to Firebase…</p>
+<!-- ══ masthead ══════════════════════════════════════════════════ -->
+<header class="masthead">
+  <div class="mark" aria-hidden="true">
+    <span class="mark-ring"></span>
+    <span class="mark-sweep"></span>
   </div>
-  <div class="spacer"></div>
-  <span class="chip" id="chipRadar">📡 RADAR</span>
-  <span class="chip" id="chipBot">🤖 ROBOT</span>
-  <span class="chip" id="chipCloud">☁ CLOUD</span>
+  <div class="title">
+    <h1>PatrolBot <em>Station</em></h1>
+    <p class="sub" id="subInfo">Linking to Firebase…</p>
+  </div>
+  <div class="clock" id="age">—</div>
 </header>
 
-<!-- ── alert banners ─────────────────────────────────────────────── -->
+<!-- ══ annunciator strip ═════════════════════════════════════════
+     Six lamps that stay dark until something latches them. Borrowed
+     straight from an industrial alarm panel: one glance, no reading.
+     ══════════════════════════════════════════════════════════════ -->
+<div class="annunciator" role="status" aria-label="System status lamps">
+  <div class="lamp" id="chipBot"><b>Robot</b><span>—</span></div>
+  <div class="lamp" id="chipCloud"><b>Cloud</b><span>—</span></div>
+  <div class="lamp" id="lampFire"><b>Flame</b><span>—</span></div>
+  <div class="lamp" id="lampMotion"><b>Motion</b><span>—</span></div>
+  <div class="lamp" id="chipRadar"><b>Radar</b><span>—</span></div>
+  <div class="lamp" id="lampPatrol"><b>Patrol</b><span>—</span></div>
+</div>
+
+<!-- ══ alert banners ═════════════════════════════════════════════ -->
 <div class="banner fire" id="bFire" role="alert">
-  🔥 CRITICAL — FIRE DETECTED! Robot halted.
-  <button type="button" data-cmd="ack">SILENCE</button>
+  <span class="bicon">🔥</span>
+  <span><b>Fire detected.</b> The robot has halted where it stands.</span>
+  <button type="button" data-cmd="ack">Silence</button>
 </div>
 <div class="banner motion" id="bMotion" role="alert">
-  🚨 INTRUDER — Motion verified. Photo saved to Google Drive.
-  <button type="button" data-cmd="ack">ACKNOWLEDGE</button>
+  <span class="bicon">🚨</span>
+  <span><b>Motion verified.</b> A photo was taken and sent to Drive.</span>
+  <button type="button" data-cmd="ack">Acknowledge</button>
 </div>
 <div class="banner stale" id="bStale" role="status">
-  ⚠ Robot is OFFLINE — showing the last values it reported.
+  <span class="bicon">◌</span>
+  <span>The robot stopped reporting. These are the last values it sent.</span>
 </div>
 
-<main class="grid">
+<main>
 
-  <!-- ── live camera ─────────────────────────────────────────────── -->
-  <section class="card stream">
-    <h2>📹 Live Feed <span class="live" id="liveDot">● LOCAL ONLY</span></h2>
+  <!-- ══ row 1 — the two pictures ════════════════════════════════ -->
+  <div class="row-views">
 
-    <img class="frame" id="streamImg" alt="Live camera stream from the robot" hidden>
-    <div class="placeholder" id="streamMsg">waiting for the robot's IP from Firebase…</div>
+    <!-- LEFT: live video -->
+    <section class="panel">
+      <header class="panel-hd">
+        <h2>Live feed</h2>
+        <span class="tag" id="liveDot">standby</span>
+        <span class="tag ghost" id="fpsTag"></span>
+      </header>
 
-    <div class="iprow">
-      <input id="camInput" type="text" inputmode="decimal"
-             placeholder="camera IP, e.g. 192.168.0.185"
-             aria-label="Camera IP address">
-      <button type="button" class="btn btn-compact" id="btnConnect">CONNECT</button>
-      <button type="button" class="btn btn-compact" id="btnRetry">RETRY</button>
-      <a class="btn btn-compact btn-link" id="btnOpenStream" href="#" target="_blank"
-         rel="noopener">OPEN ↗</a>
-      <small>
-        Auto-filled from Firebase. Video only works while you are on the same Wi-Fi as
-        the robot — and the browser must allow <b>Insecure content</b> for this site
-        (padlock / ⓘ icon → Site settings). <b>OPEN ↗</b> loads the raw stream in a new
-        tab, which is the quickest way to tell a camera problem from a browser one.
-      </small>
-    </div>
+      <div class="viewport">
+        <img id="streamImg" alt="Live camera stream from the robot" hidden>
+        <div class="empty" id="streamMsg">Waiting for the robot to report its camera address.</div>
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+      </div>
+
+      <div class="panel-ft">
+        <input id="camInput" type="text" inputmode="decimal"
+               placeholder="192.168.0.185" aria-label="Camera IP address">
+        <button type="button" class="btn sm" id="btnConnect">Connect</button>
+        <button type="button" class="btn sm" id="btnRetry">Retry</button>
+        <a class="btn sm" id="btnOpenStream" href="#" target="_blank" rel="noopener">Open ↗</a>
+      </div>
+      <p class="note">
+        Video comes straight from the robot's own address, so it only plays while you
+        are on the same Wi-Fi — and the browser has to allow insecure content for this
+        page. <b>Open ↗</b> loads the raw stream in a new tab, which tells a camera
+        fault apart from a browser one in a couple of seconds.
+      </p>
+    </section>
+
+    <!-- RIGHT: latest capture -->
+    <section class="panel">
+      <header class="panel-hd">
+        <h2>Latest capture</h2>
+        <span class="tag ghost" id="capAge"></span>
+      </header>
+
+      <div class="viewport">
+        <a id="capLink" href="#" target="_blank" rel="noopener">
+          <img id="capImg" alt="Most recent captured photo" hidden>
+        </a>
+        <div class="empty" id="capMsg">No captures yet. Press <b>Capture now</b> below, or wait for a motion alert.</div>
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+      </div>
+
+      <div class="panel-ft filename"><span id="capName"></span></div>
+      <div class="filmstrip" id="capStrip"></div>
+      <p class="note">
+        Captures travel by way of Google Drive, so unlike the video they reach you
+        anywhere in the world. Click any frame to open the original.
+      </p>
+    </section>
+  </div>
+
+  <!-- ══ row 2 — the log ═════════════════════════════════════════ -->
+  <section class="panel">
+    <header class="panel-hd">
+      <h2>Event log</h2>
+      <span class="tag ghost" id="evCount"></span>
+    </header>
+    <div class="log" id="log"><div class="ev">Reading the log…</div></div>
   </section>
 
-  <!-- ── latest capture (from Google Drive, works worldwide) ─────── -->
-  <section class="card capture">
-    <h2>📸 Latest Capture <span class="sub" id="capAge"></span></h2>
+  <!-- ══ row 3 — instruments ═════════════════════════════════════ -->
+  <section class="panel">
+    <header class="panel-hd"><h2>Instruments</h2></header>
 
-    <a id="capLink" href="#" target="_blank" rel="noopener" class="capwrap">
-      <img class="frame" id="capImg" alt="Most recent captured photo" hidden>
-    </a>
-    <div class="placeholder" id="capMsg">no captures yet — trigger one below</div>
-
-    <div class="strip" id="capStrip"></div>
-  </section>
-
-  <!-- ── alert history ───────────────────────────────────────────── -->
-  <section class="card events">
-    <h2>🗒️ Alert History <span class="sub" id="evCount"></span></h2>
-    <div class="log" id="log"><div class="ev">loading events…</div></div>
-  </section>
-
-  <!-- ── telemetry + controls ────────────────────────────────────── -->
-  <section class="card telemetry">
-    <h2>📊 Live Telemetry <span class="sub" id="age"></span></h2>
-
-    <div class="tiles">
-      <div class="tile"><p class="l">Front Distance</p><p class="v acc" id="tDist">—</p><p class="l">cm</p></div>
-      <div class="tile"><p class="l">Left / Right</p><p class="v" id="tLR">—</p><p class="l">cm sweep</p></div>
-      <div class="tile"><p class="l">Flame</p><p class="v ok" id="tFire">—</p><p class="l">IR sensor</p></div>
-      <div class="tile"><p class="l">Motion Alert</p><p class="v ok" id="tMotion">—</p><p class="l" id="tHits">verifying 0/4</p></div>
-      <div class="tile"><p class="l">Radar Signal</p><p class="v" id="tRadar">—</p><p class="l">CDS night-gated</p></div>
-      <div class="tile"><p class="l">Robot State</p><p class="v acc" id="tState">—</p><p class="l">drive FSM</p></div>
-      <div class="tile"><p class="l">Photos Taken</p><p class="v acc" id="tPhotos">—</p><p class="l">since boot</p></div>
-      <div class="tile"><p class="l">Wi-Fi / Uptime</p><p class="v" id="tRssi">—</p><p class="l" id="tUp">—</p></div>
+    <div class="gauges">
+      <div class="gauge wide">
+        <span class="glabel">Clearance</span>
+        <div class="readout"><b id="tDist">—</b><i>cm ahead</i></div>
+        <div class="lr"><span id="tLR">—</span><i>left / right sweep</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Flame</span>
+        <div class="readout"><b id="tFire">—</b><i>IR sensor</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Motion</span>
+        <div class="readout"><b id="tMotion">—</b><i id="tHits">0 of 4 samples</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Radar</span>
+        <div class="readout"><b id="tRadar">—</b><i>night-gated</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Drive state</span>
+        <div class="readout"><b id="tState">—</b><i>motion FSM</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Captures</span>
+        <div class="readout"><b id="tPhotos">—</b><i>since boot</i></div>
+      </div>
+      <div class="gauge">
+        <span class="glabel">Signal</span>
+        <div class="readout"><b id="tRssi">—</b><i id="tUp">—</i></div>
+      </div>
     </div>
 
     <div class="controls">
-      <button type="button" class="btn go"   id="btnPatrol">▶ START PATROL</button>
-      <button type="button" class="btn"      id="btnSnap" data-cmd="snap">📸 CAPTURE NOW</button>
-      <button type="button" class="btn halt" id="btnAck"  data-cmd="ack">🔇 SILENCE ALARMS</button>
-
-      <div class="speedbox">
-        <label for="speedSlider">⚡ Speed</label>
+      <button type="button" class="btn go" id="btnPatrol">Start patrol</button>
+      <button type="button" class="btn" id="btnSnap" data-cmd="snap">Capture now</button>
+      <button type="button" class="btn stop" id="btnAck" data-cmd="ack">Silence alarms</button>
+      <div class="speed">
+        <label for="speedSlider">Speed</label>
         <input type="range" id="speedSlider" min="60" max="255" step="5" value="120">
         <b id="speedLabel">120</b>
       </div>
@@ -113,13 +178,10 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <footer>
-  Sensor data via Firebase (works worldwide) · Camera via local IP (same Wi-Fi only)<br>
-  ESP32 Main Controller · ESP32-CAM Vision Module · Google Drive archival<br>
-  Developer: NenoCode
-</footer>
+  Telemetry and captures travel over Firebase and Drive · video stays on the local network<br>
+  ESP32 main controller · ESP32-CAM vision module
 </footer>
 
-<!-- load order matters: config → api → ui → camera → app -->
 <script src="assets/js/config.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/ui.js"></script>
