@@ -121,106 +121,73 @@
     }
   }
 
-  /* ================= captured photos [NEW v4.6] =================== *
-   * The camera can only serve photos on a private LAN address, so the
-   * cloud dashboard reads them from Drive instead: Apps Script
-   * publishes each file's ID to Firebase right after saving it, and
-   * Drive's thumbnail endpoint renders straight into an <img>.       */
-  let lastPhotoId = null;
-
-  /* [FIX-17] Google serves Drive images from several hosts, and the
-     one the old code used (drive.google.com/thumbnail) 404s until
-     Drive has generated a thumbnail — which for a photo uploaded
-     seconds ago it has not. That is why captures reached Drive but
-     never appeared here. Try each candidate in turn and keep the
-     first that actually decodes. */
-  function loadWithFallback(img, urls, onFail){
-    let i = 0;
-    function attempt(){
-      if (i >= urls.length){ onFail(); return; }
-      const url = urls[i++];
-      if (!url){ attempt(); return; }
-      img.onerror = attempt;
-      img.onload  = function(){
-        img.hidden = false;
-        if (img.id === "capImg") UI.$("capMsg").style.display = "none";
-      };
-      img.src = url;
-    }
-    attempt();
-  }
+  /* ================= Google Drive Image Slider =================== */
+  const GAS_URL = "আপনার_APPS_SCRIPT_WEB_APP_URL_এখানে_দিন"; // Apps Script-এর Web App URL বসান
+  let sliderImages = [];
+  let currentSlideIndex = 0;
 
   async function pollPhotos(){
-    try{
-      const p = await API.getLastPhoto();
-      const img  = UI.$("capImg");
-      const msg  = UI.$("capMsg");
-      const link = UI.$("capLink");
+    try {
+      const msg = UI.$("capMsg");
+      const img = UI.$("capImg");
+      const strip = UI.$("capStrip");
 
-      if (!p || !p.id){
+      // Apps Script থেকে ছবির লিস্ট নিয়ে আসা
+      const res = await fetch(GAS_URL);
+      sliderImages = await res.json();
+
+      if (!sliderImages || sliderImages.length === 0) {
         msg.style.display = "block";
-        msg.textContent = "No captures yet. Press “Capture now”, or wait for a motion alert.";
+        msg.textContent = "কোনো ছবি পাওয়া যায়নি।";
         img.hidden = true;
         return;
       }
 
-      UI.setText("capAge", p.ts ? UI.ago(Date.now() - p.ts) : "");
-      UI.setText("capName", p.name || "");
+      // মূল স্লাইডারে ছবি দেখানো
+      img.src = sliderImages[currentSlideIndex];
+      img.hidden = false;
+      msg.style.display = "none";
 
-      /* Only touch img.src when the photo actually changed — otherwise
-         every poll restarts the download and the panel flickers. */
-      if (p.id !== lastPhotoId){
-        lastPhotoId = p.id;
-        link.href = p.view || "#";
-        msg.style.display = "block";
-        msg.textContent = "loading photo…";
-        img.hidden = true;
-
-        const camIp = CAM.getIp();
-        loadWithFallback(img, [
-          p.img,                                    // lh3 direct host
-          p.alt1,                                   // drive thumbnail
-          p.alt2,                                   // legacy uc?export=view
-          p.thumb,                                  // small lh3
-          camIp ? ("http://" + camIp + "/photo?t=" + Date.now()) : null
-        ], function(){
-          img.hidden = true;
-          msg.style.display = "block";
-          msg.innerHTML =
-            "📸 A capture exists in Drive but no image host would serve it.<br><br>" +
-            "In Apps Script confirm the sharing line runs " +
-            "(<span class='mono'>ANYONE_WITH_LINK</span>), then redeploy as a " +
-            "<b>new version</b>. Meanwhile the file itself is safe — " +
-            "<a href='" + (p.view || "#") + "' target='_blank' rel='noopener'>open it in Drive</a>.";
-        });
-      }
-    }catch(e){
-      /* /lastphoto simply does not exist until the first upload. */
-    }
-
-    try{
-      const list = await API.getPhotos();
-      const strip = UI.$("capStrip");
+      // নিচের ছোট স্ট্রিপে (thumbnail) স্লাইডারের ন্যাভিগেশন তৈরি করা
       strip.innerHTML = "";
-      for (const ph of list.slice(0, 12)){
-        const a = document.createElement("a");
-        a.href = ph.view || "#";
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.title = ph.ts ? new Date(ph.ts).toLocaleString() : (ph.name || "");
+      sliderImages.forEach((url, index) => {
         const im = document.createElement("img");
-        im.alt = ph.name || "capture";
-        im.loading = "lazy";
-        /* Same fallback chain, minus the local camera (which only ever
-           holds the single most recent shot). */
-        loadWithFallback(im, [ph.thumb, ph.alt1, ph.img, ph.alt2],
-                         function(){ a.remove(); });
-        a.appendChild(im);
-        strip.appendChild(a);
-      }
-    }catch(e){ /* keep the previous strip */ }
+        im.src = url;
+        im.style.cursor = "pointer";
+        im.style.margin = "0 5px";
+        im.style.width = "60px";
+        im.style.height = "60px";
+        im.style.objectFit = "cover";
+        im.style.borderRadius = "5px";
+        im.style.opacity = index === currentSlideIndex ? "1" : "0.5"; 
+        
+        // থাম্বনেইলে ক্লিক করলে স্লাইডার চেঞ্জ হবে
+        im.onclick = () => {
+          currentSlideIndex = index;
+          pollPhotos();
+        };
+        strip.appendChild(im);
+      });
+
+    } catch(e) {
+      console.log("Slider error:", e);
+    }
   }
 
+  // Next / Previous বাটনের জন্য ফাংশন 
+  window.nextSlide = function() {
+    if (sliderImages.length > 0) {
+      currentSlideIndex = (currentSlideIndex + 1) % sliderImages.length;
+      pollPhotos();
+    }
+  };
+
+  window.prevSlide = function() {
+    if (sliderImages.length > 0) {
+      currentSlideIndex = (currentSlideIndex - 1 + sliderImages.length) % sliderImages.length;
+      pollPhotos();
+    }
+  };
   /* ================= remote control =============================== */
   async function send(act, val){
     if (!cfg.enableControls){
