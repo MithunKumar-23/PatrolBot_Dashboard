@@ -122,7 +122,7 @@
   }
 
   /* ================= Google Drive Image Slider =================== */
-  const GAS_URL = "আপনার_APPS_SCRIPT_WEB_APP_URL_এখানে_দিন"; // Apps Script-এর Web App URL বসান
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxX3JR9pnFvoWi7pS_5w_eNsynRej0fEJEt0or2EYeMud9I3fB0BK4_waPnKWQ4-WyM/exec"; // Apps Script-এর Web App URL বসান
   let sliderImages = [];
   let currentSlideIndex = 0;
 
